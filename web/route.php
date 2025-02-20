@@ -9,5 +9,6 @@ Route::controller(homeController::class)->group(function(){
     Route::post("insert","insert");
     Route::get("update/:id_usuario","updateView");
     Route::put("update/:id_usuario","update");
+    Route::get("delete/:id_usuario","delete");
 });
 ?>

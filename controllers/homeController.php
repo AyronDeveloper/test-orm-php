@@ -1,6 +1,7 @@
 <?php
 namespace controllers;
 
+use configs\Database\Qmysql;
 use configs\Handle\Request;
 use models\Usuario;
 
@@ -16,9 +17,9 @@ class homeController{
 
     public function testeando(){
 
-        $usuarios=Usuario::select()->get();
-
-        echo json_encode($usuarios);
+        var_dump(Usuario::select()->orderBy("usuario","desc")->get("query"));
+        echo "<hr>";
+        echo json_encode(Usuario::select()->orderBy("usuario","desc")->get());
     }
 
 
@@ -71,6 +72,19 @@ class homeController{
             header("Location: ".url("update/$id_usuario"));
         }
 
+    }
+
+    public function delete($id_usuario){
+
+
+        $delete=Usuario::delete()->where("id_usuario",$id_usuario)->run();
+
+
+        if($delete){
+            header("Location: ".url());
+        }else{
+            header("Location: ".url("test"));
+        }
     }
 
 }

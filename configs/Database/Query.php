@@ -1,15 +1,11 @@
 <?php
 namespace configs\Database;
 
-use PDO;
-use PDOException;
-
 class Query{
 
     protected $table;
     protected $query;
     protected $values=[];
-    protected $connection;
 
 
     public static function select(){
@@ -32,7 +28,7 @@ class Query{
             $setSelect="*";
         }
 
-        $self->query="SELECT ".$setSelect." FROM $self->table";
+        $self->query="SELECT $setSelect FROM {$self->table}";
 
         return $self;
 
@@ -46,8 +42,19 @@ class Query{
         return $this;
     }
 
-    public function leftJoin(){
 
+    public function leftJoin($table,$oneColumn,$compardador,$twoColumn){
+        
+        $this->query.=" LEFT JOIN $table ON $oneColumn $compardador $twoColumn ";
+
+        return $this;
+    }
+
+
+    public function rightJoin($table,$oneColumn,$compardador,$twoColumn){
+        $this->query.=" RIGHT JOIN $table ON $oneColumn $compardador $twoColumn ";
+
+        return $this;
     }
     
     
@@ -85,18 +92,13 @@ class Query{
 
         if(is_array($values)){
 
-            $len=count($values);
-            $count=0;
+            $placeholders=implode(", ",array_fill(0,count($values),"?"));
 
-            $setWhere="$column IN( ";
             foreach($values as $val){
-                $count++;
-                $setWhere.=" '$val'";
-                if($len>$count){
-                    $setWhere.=",";
-                }
+                array_push($this->values,$val);
             }
-            $setWhere.=" )";
+
+            $setWhere="$column IN( $placeholders )";
 
         }else{
             $setWhere="$column IN( $values )";
@@ -114,18 +116,13 @@ class Query{
 
         if(is_array($values)){
 
-            $len=count($values);
-            $count=0;
+            $placeholders=implode(", ",array_fill(0,count($values),"?"));
 
-            $setWhere="$column NOT IN( ";
             foreach($values as $val){
-                $count++;
-                $setWhere.=" '$val'";
-                if($len>$count){
-                    $setWhere.=",";
-                }
+                array_push($this->values,$val);
             }
-            $setWhere.=" )";
+
+            $setWhere="$column NOT IN( $placeholders )";
 
         }else{
             $setWhere="$column NOT IN( $values )";
@@ -139,7 +136,10 @@ class Query{
 
     public function whereBetween($column,$value1,$value2){
 
-        $setWhere="$column BETWEEN '$value1' AND '$value2' ";
+        array_push($this->values,$value1);
+        array_push($this->values,$value2);
+
+        $setWhere="$column BETWEEN ? AND ? ";
 
         $this->query.=$this->verifyWhere().$setWhere;
 
@@ -149,7 +149,10 @@ class Query{
 
     public function whereNotBetween($column,$value1,$value2){
 
-        $setWhere="$column NOT BETWEEN '$value1' AND '$value2' ";
+        array_push($this->values,$value1);
+        array_push($this->values,$value2);
+
+        $setWhere="$column NOT BETWEEN ? AND ? ";
 
         $this->query.=$this->verifyWhere().$setWhere;
 
@@ -158,11 +161,31 @@ class Query{
 
 
     public function orderBy($column,$order=null){
+
+        //return strpos($this->query,"ORDER BY")!==false?" AND ":" WHERE ";
+
+        if(!empty($order)){
+            $order=strtoupper($order);
+        }else{
+            $order="";
+        }
+
+
+        if(strpos($this->query," ORDER BY")!==false){
+            $this->query.=", $column $order ";
+        }else{
+            $this->query.=" ORDER BY $column $order ";
+        }
+
+
         return $this;
     }
 
 
     public function groupBy($column){
+
+        $this->query.=" GROUP BY $column ";
+
         return $this;
     }
 
@@ -211,68 +234,19 @@ class Query{
 
         return $self;
     }
-
-
-    public function get($query=null){
-
-        if($query=="query"){
-            return $this->query;
-        }else{
-            $dataQuery=$this->connection->prepare($this->query);
-
-            foreach($this->values as $key=>$value){
-                $dataQuery->bindValue($key+1,$value,$value===null?PDO::PARAM_NULL:PDO::PARAM_STMT);
-            }
-            
-            $dataQuery->execute();
-    
-            $data=$dataQuery->fetchAll(PDO::FETCH_ASSOC);
     
     
-            return $data;
-        }
-    }
+    public static function delete(){
 
-    public function first($query=null){
+        $self=new static();
 
-        if($query=="query"){
-            return $this->query;
-        }else{
+        $calledClass=get_called_class();
+        $self->table=(new $calledClass())->table;
 
-            $dataQuery=$this->connection->prepare($this->query);
 
-            foreach($this->values as $key=>$value){
-                $dataQuery->bindValue($key+1,$value,$value===null?PDO::PARAM_NULL:PDO::PARAM_STMT);
-            }
+        $self->query="DELETE FROM {$self->table} ";
 
-            $dataQuery->execute();
-    
-            $data=$dataQuery->fetch(PDO::FETCH_ASSOC);
-    
-    
-            return $data;
-        }
-    }
-
-    public function run($query=null){
-
-        if($query=="query"){
-            return $this->query;
-        }else{
-
-            try{
-                $result=$this->connection->prepare($this->query);
-    
-                foreach($this->values as $key=>$value){
-                    $result->bindValue($key+1,$value,$value===null?PDO::PARAM_NULL:PDO::PARAM_STMT);
-                }
-                
-                return $result->execute();
-            }catch(PDOException $e){
-                error_log("Error: ".$e->getMessage());
-                return false;
-            }
-        }
+        return $self;
     }
 
 }
